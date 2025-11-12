@@ -20,7 +20,7 @@ You can see the requests and its contents on **http://127.0.0.1:8081** :)
 There are some bugs on the body content visualization. If you want to fix it, ok.
 Also, some headers are being hidden for "safety". Include or exclude as you want.
 
-You can also add uls to bypass MITM, just push then to this:
+You can also add urls to bypass MITM, just push them to this:
 
 ```golang
 var mitmBypass = map[string]struct{}{}
