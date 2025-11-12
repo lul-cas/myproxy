@@ -25,5 +25,3 @@ You can also add uls to bypass MITM, just push then to this:
 ```golang
 var mitmBypass = map[string]struct{}{}
 ```
-
-Why? Because why would you trust any comercial tools?
