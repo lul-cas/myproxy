@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <title>myproxy</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg:#0b1020;
+      --fg:#e5e7eb;
+      --card:#10162b;
+      --muted:#9ca3af;
+      --ok:#10b981;
+      --bad:#ef4444;
+      --line:#1f2937;
+    }
+    
+    html,body{
+      height:100%
+    }
+
+    body{
+      margin:0; 
+      font:14px/1.4 system-ui,Segoe UI,Roboto,Arial;
+      background:var(--bg);
+      color:var(--fg);
+    }
+    
+  header{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:12px 16px;
+    border-bottom:1px solid var(--line);
+    position:sticky;
+    top:0;
+    background:linear-gradient(#0b1020,#0b1020e6);
+    backdrop-filter:saturate(1.2) blur(6px);
+    z-index:10
+  }
+
+  header h1{
+    font-size:16px;
+    margin:0
+  }
+  .container{
+    padding:12px 16px;
+    max-width:1200px;
+    margin:0 auto
+  }
+
+  .controls{
+    display:flex;
+    gap:8px;
+    margin-bottom:10px
+  }
+  input[type="text"]{
+    flex:1;
+    padding:10px 12px;
+    border-radius:10px;
+    border:1px solid var(--line);
+    background:#0f1530;
+    color:var(--fg)
+  }
+
+  button{
+    padding:10px 12px;
+    border-radius:10px;
+    border:1px solid var(--line);
+    background:#121936;
+    color:var(--fg);
+    cursor:pointer
+  }
+
+  table{
+    width:100%;
+    border-collapse:separate;
+    border-spacing:0 6px
+  }
+
+  th,td{
+    padding:10px 12px;
+    text-align:left
+  }
+  
+  thead th{
+    color:var(--muted);
+    font-weight:600
+  }
+  
+  tbody tr{
+    background:var(--card);
+    border:1px solid var(--line)
+  }
+  tbody tr td:first-child{
+    border-top-left-radius:10px;
+    border-bottom-left-radius:10px
+  }
+  
+  tbody tr td:last-child{
+    border-top-right-radius:10px;
+    border-bottom-right-radius:10px
+  }
+
+  .status{
+    font-weight:700
+  }
+  .ok{
+    color:var(--ok)
+  }
+
+  .bad{
+    color:var(--bad)
+  }
+  
+  .mono{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size:12px
+  }
+  
+  .url{max-width:540px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis
+  }
+
+  .modal{
+    position:fixed;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background:rgba(0,0,0,.45)
+  }
+
+  .card{
+    max-width:1000px;
+    width:95%;
+    background:#0f1530;
+    border:1px solid var(--line);
+    border-radius:12px;
+    overflow:hidden;
+    box-shadow:0 10px 30px #0006
+  }
+
+  .card header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 14px;
+    border-bottom:1px solid var(--line);
+    background:#0d1328
+  }
+
+  .sections{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+    padding:12px
+  } 
+  pre{
+    margin:0;
+    background:#0b1020;
+    border:1px solid var(--line);
+    padding:12px;
+    border-radius:10px;
+    max-height:320px;
+    overflow:auto
+  }
+
+  .kv{
+    background:#0b1020;
+    border:1px solid var(--line);
+    padding:12px;
+    border-radius:10px;
+    max-height:320px;
+    overflow:auto
+  }
+  .kv div{
+    display:grid;
+    grid-template-columns:180px 1fr;
+    gap:8px;
+    margin-bottom:6px
+  }
+  
+  .pill{
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:3px 8px;
+    font-size:12px;
+    color:var(--muted)
+  }
+  
+  .muted{
+    color:var(--muted)
+  }
+  
+  .flex{
+    display:flex;
+    gap:8px;
+    align-items:center
+  }
+  .right{
+    margin-left:auto
+  }
+
+
+  </style>
+</head>
+<body>
+  <header>
+    <h1>myrpoxy — Inspector</h1>
+    <span class="pill">proxy: 127.0.0.1:8080</span>
+    <span class="pill">UI: 127.0.0.1:8081</span>
+    <span class="muted right">Conectado <span id="sseState">...</span></span>
+  </header>
+  <div class="container">
+    <div class="controls">
+      <input id="q" type="text" placeholder="filtrar por URL / método / IP (digite e aguarde)">
+      <button id="refresh">Atualizar</button>
+      <button id="clear">Limpar</button>
+      <button id="download">Exportar JSON</button>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Quando</th>
+          <th>Método</th>
+          <th>Status</th>
+          <th>URL</th>
+          <th>ms</th>
+          <th>IP</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="card">
+      <header>
+        <div class="flex">
+          <strong id="mMethod"></strong>
+          <span id="mURL" class="mono"></span>
+        </div>
+        <button onclick="closeModal()">Fechar</button>
+      </header>
+      <div class="sections">
+        <div>
+          <h4 class="muted">Request Headers</h4>
+          <div id="mReqH" class="kv"></div>
+          <h4 class="muted">Request Body</h4>
+          <pre id="mReqB"></pre>
+        </div>
+        <div>
+          <h4 class="muted">Response Headers</h4>
+          <div id="mRespH" class="kv"></div>
+          <h4 class="muted">Response Body</h4>
+          <pre id="mRespB"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const tbody = document.getElementById('tbody');
+const q = document.getElementById('q');
+const sseState = document.getElementById('sseState');
+let cache = [];
+
+function fmtDate(iso){
+  const d = new Date(iso);
+  return d.toLocaleString();
+}
+
+function badgeStatus(n){
+  const cls = n >=200 && n<400 ? 'ok' : 'bad';
+  return `<span class="status ${cls}">${n}</span>`;
+}
+
+function render(rows){
+  tbody.innerHTML = rows.map(e => `
+    <tr onclick="openDetail(${e.id})" title="ver detalhes">
+      <td class="mono">${e.id}</td>
+      <td>${fmtDate(e.startedAt)}</td>
+      <td class="mono">${e.method}</td>
+      <td>${badgeStatus(e.status)}</td>
+      <td class="url mono">${e.url}</td>
+      <td class="mono">${e.durationMs}</td>
+      <td class="mono">${e.clientIp||''}</td>
+    </tr>
+  `).join('');
+}
+
+async function fetchList(){
+  const r = await fetch('/api/requests?q=' + encodeURIComponent(q.value) + '&limit=300');
+  cache = await r.json();
+  render(cache);
+}
+
+document.getElementById('refresh').onclick = fetchList;
+document.getElementById('clear').onclick = () => { cache = []; render(cache); };
+document.getElementById('download').onclick = () => {
+  const blob = new Blob([JSON.stringify(cache, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'devproxy-export.json';
+  a.click();
+};
+
+q.addEventListener('input', () => {
+  if (window._t) clearTimeout(window._t);
+  window._t = setTimeout(fetchList, 300);
+});
+
+async function openDetail(id){
+  const r = await fetch('/api/requests/' + id);
+  const e = await r.json();
+  document.getElementById('mMethod').textContent = `${e.method} — ${e.status} (${e.durationMs} ms)`;
+  document.getElementById('mURL').textContent = e.url;
+  const reqH = document.getElementById('mReqH'); reqH.innerHTML = '';
+  Object.entries(e.reqHeaders||{}).forEach(([k,v])=>{
+    const d = document.createElement('div');
+    d.innerHTML = `<span class="muted mono">${k}</span><span class="mono">${v}</span>`;
+    reqH.appendChild(d);
+  });
+  const respH = document.getElementById('mRespH'); respH.innerHTML = '';
+  Object.entries(e.respHeaders||{}).forEach(([k,v])=>{
+    const d = document.createElement('div');
+    d.innerHTML = `<span class="muted mono">${k}</span><span class="mono">${v}</span>`;
+    respH.appendChild(d);
+  });
+  document.getElementById('mReqB').textContent = e.reqBody || '';
+  document.getElementById('mRespB').textContent = e.respBody || '';
+  document.getElementById('modal').style.display = 'flex';
+}
+
+function closeModal(){ document.getElementById('modal').style.display='none'; }
+document.getElementById('modal').addEventListener('click', (ev)=>{
+  if (ev.target.id === 'modal') closeModal();
+});
+
+function connectSSE(){
+  const es = new EventSource('/api/stream');
+  sseState.textContent = '— conectado';
+  es.onmessage = (ev) => {
+    try{
+      const e = JSON.parse(ev.data);
+      cache.unshift(e);
+      const f = q.value.trim().toLowerCase();
+      if (!f || e.url.toLowerCase().includes(f) || e.method.toLowerCase().includes(f) || (e.clientIp||'').toLowerCase().includes(f)){
+        render(cache.slice(0, 500));
+      }
+    }catch(_){}
+  };
+  es.onerror = ()=>{ sseState.textContent = '— reconectando...'; setTimeout(connectSSE, 2000); es.close(); };
+}
+connectSSE();
+
+fetchList();
+</script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+*.crl
+*.key
+*.pem
+*.exe
